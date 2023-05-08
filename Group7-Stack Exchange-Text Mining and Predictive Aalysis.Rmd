@@ -1,0 +1,446 @@
+---
+title: "Group7-Stack Exchange-Text Mining and Predictive Analytics"
+author: "Akhil Golla, A. Krishna Reddy, Srirag Nair K M, Parag Parab"
+date: "04/26/2023"
+output: html_document
+---
+
+## Business Context:
+
+**Stack Exchange** is a collection of **question-and-answer** (Q&A) websites dedicated to various fields, with each site specializing in a specific topic. The network utilizes a reputation-based award system, which promotes self-moderation among users. The three most popular sites on the network, as of **January 2023**, are Stack Overflow, Super User, and Ask Ubuntu.
+
+For this project, we are focusing on Stack Overflow website within Stack Exchange network.
+
+API:
+
+* https://api.stackexchange.com/2.2/posts?site=stackoverflow
+* https://api.stackexchange.com/2.2/users?site=stackoverflow
+* https://api.stackexchange.com/2.2/tags?site=stackoverflow
+
+## Problem Decription:
+
+Below is the aim of this project:
+
+1. To predict whether a post will be answered or not.
+
+2. To predict the view count of a particular post based on tags to maintain the community engagement.
+
+3. To analyze the most popular topics on the stack exchange website.
+
+4. Analyzing the data of Users to give an apt summary of their reputation trends over the years.
+
+## Data Download Link:
+
+* URL to download data: "https://drive.google.com/drive/folders/1wI6KOYO-kInD-aLM3MlXcUpBEezJ-AmC?usp=sharing"
+
+## Data Summary, Exploration and discussion:
+
+We have covered data wrangling, data exploration and insights generation in this section.
+
+There are 3 types of data that we have used in our project:
+
+1. Posts data
+2. Users data
+3. Tags data
+
+Each of the above 3 datasets contain ~42000 instances.
+
+Posts data: It contains data about various posts and has below columns
+
+1. Id
+2. PostTypeId
+3. AcceptedAnswerId
+4. ParentId
+5. CreationDate
+6. DeletionDate
+7. Score
+8. ViewCount
+9. Body
+10. OwnerUserId
+11. OwnerDisplayName
+12. LastEditorUserId
+13. LastEditorDisplayName
+14. LastEditDate
+15. LastActivityDate
+16. Title
+17. Tags
+18. AnswerCount
+19. CommentCount
+20. FavoriteCount
+21. ClosedDate
+22. CommunityOwnedDate
+23. ContentLicense
+
+Users data: It has user specific data and contains below columns
+
+1. Id
+2. Reputation
+3. CreationDate
+4. DisplayName
+5. LastAccessDate
+6. WebsiteUrl
+7. Location
+8. AboutMe
+9. Views
+10. UpVotes
+11. DownVotes
+12. ProfileImageUrl
+13. EmailHash
+14. AccountId
+
+Tags data: It contains data of various tags that the posts are affiliated to and has below columns
+
+1. Id
+2. TagName
+3. Count
+4. ExcerptPostId
+5. WikiPostId
+
+## Libraries 
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+# loading required packages
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyverse)
+library(knitr)
+library(forecast)
+library(caret)
+library(wordcloud)
+library(rpart)
+library(rpart.plot)
+library(neuralnet)
+library(e1071)
+library(lubridate)
+library(randomForest)
+library(h2o)
+library(DALEX)
+library(stopwords)
+```
+
+## Reading the Files 
+
+We are reading the three files the **posts.csv**, **tags.csv**, and **users.csv**, and storing the data from each file in separate variables **posts_data**, **tags_data**, and **users_data**.
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Reading data
+posts_data <- read.csv("posts.csv")
+tags_data <- read.csv("tags.csv")
+users_data <- read.csv("users.csv")
+```
+
+
+## Data Processing
+
+We are adding three new columns to the **posts_data** table: **year** to extract the year from **CreationDate**, **Closed_Flag** to indicate whether a post has been closed or not, and **is_answered** to show if a post has an accepted answer or not. These columns will help us analyze the data more efficiently.
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Creating new columns for Year and Flag columns
+posts_data$year <- lubridate::year(mdy_hm(posts_data$CreationDate))
+posts_data$Closed_Flag <- ifelse(posts_data$ClosedDate == "", "open", "closed")
+posts_data$is_answered <- ifelse(posts_data$AcceptedAnswerId == "", 0, 1)
+```
+
+This code counts the **number of posts per year** and creates a new table called **posts_data_per_year**. We are extracting the year from the **CreationDate** column. The resulting table has two columns, **year** and **countOfPosts**, which show the year and the number of posts for that year.
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Count the number of posts per year
+posts_data_per_year <- posts_data %>%
+  count(Year = lubridate::year(mdy_hm(posts_data$CreationDate))) %>%
+  rename(year = Year, countOfPosts = n)
+names(posts_data_per_year) <- c("Year", "Post_Count")
+library(kableExtra)
+head(posts_data_per_year, n = 6) %>% 
+  kbl(caption = "Posts Per Year", align = "c") %>%
+  kable_classic(full_width = F)
+```
+
+
+
+### Visualization 1 - Number of Posts Year-on-Year
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Create a bar plot of post count per year
+head(posts_data_per_year, 10) %>%
+  ggplot() +
+  geom_col(aes(Year, Post_Count), fill = "cadetblue3") +
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5),
+        panel.grid.major = element_blank()) +
+  xlab("Year") + 
+  ylab("Count of Posts")
+
+```
+
+
+* Here we can observe that **2019** and **2020** were the most engagement years. Also, **2022** is performing better as compared to **2021**
+
+
+### Visualization 2 - Answered v/s Unanswered Posts
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+ggplot(posts_data,aes(x= "", fill=Closed_Flag)) +
+  geom_bar(width=1)+
+  coord_polar("y")
+ 
+```
+
+* The pie chart indicates that a significant proportion of questions on the website are left unanswered, posing a potential risk to its user engagement. To mitigate this risk, implementing a reward system for users who answer specific questions could be a possible solution to incentivize participation and increase engagement.
+
+* This would not only encourage users to contribute their expertise but also foster a sense of community on the website.
+
+
+### Visualization 3 - Most Popular Tags
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+head(tags_data,10) %>%
+  ggplot(aes(fct_reorder(TagName,
+                                 Count),
+             Count))+
+  geom_col(fill = "darkgoldenrod2") +
+  labs(x="Tag Name", y="Occurence", title="Most Popular Tags") +
+  coord_flip()
+
+```
+
+* The horizontal bar chart above illustrates the **top 10** most frequently used tags on the website. By analyzing this chart, we can gain insight into the topics that are commonly discussed among members and determine their relevance to the website's purpose.
+
+* From the above horizontal bar graph we can see that **JavaScript** is the most popular tag followed by **Java**, **C#** and **Python**.
+
+
+### Visualization 4 - Reputation Analysis over the years
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+users_data$Year <- lubridate::year(mdy_hm(users_data$CreationDate))
+
+# Creating a data frame to get average reputation per year
+avg_rep_per_year <- aggregate(users_data[, c('Reputation')], list(users_data$Year), max)
+names(avg_rep_per_year) <- c("Year", "Reputation_Count")
+```
+```{r}
+library(kableExtra)
+head(avg_rep_per_year, n = 6) %>% 
+  kbl(caption = "Reputation Per Year", align = "c") %>%
+  kable_classic(full_width = F)
+```
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+ggplot(data=avg_rep_per_year, aes(x=Year, y=Reputation_Count, group=1)) +
+  geom_line(color = "red")+
+  geom_point()+
+  labs(x="Year", y="Average Reputation", title="Average Reputation by Year")
+
+```
+
+* Based on the line plot above, it can be deduced that the **average reputation** in **2022** was the **lowest** among the observed years. This could potentially signify a decline in community engagement, further substantiated by the high number of unanswered questions. 
+
+* As such, it is crucial for Stack Exchange, particularly Stack Overflow, to implement measures that can help sustain community participation and maintain a healthy level of engagement.
+
+## AI/ML/NLP Procedure Summary:
+
+This section focuses on the **Machine Learning** Models and **Text Mining**
+
+We are implementing 2 modeling techniques as below:
+
+1. Random Forest
+2. Deep Learning
+
+In addition to this, we are also implementing **Text mining/NLP technique** to create a word cloud of most frequent keywords in the title column of posts.
+
+## Data Pre-Processing
+
+For determining the ViewCount on a particular post we have identified Tags of Post as the most important factor.
+Steps:
+
+1. Pre-processing
+2. Splitting the tags 
+3. Converting text to numeric values using Label Encoding
+4. Handling NA values
+
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+# splitting the tags into separate columns
+
+posts_new_data <- posts_data %>% separate(Tags,c("v1","v2","v3","v4","v5","v6"),"><")
+
+# removing the unwanted characters from the separated columns
+posts_new_data$v1 <- gsub('<', '', posts_new_data$v1)
+posts_new_data$v1 <- gsub('>', '', posts_new_data$v1)
+posts_new_data$v2 <- gsub('<', '', posts_new_data$v2)
+posts_new_data$v2 <- gsub('>', '', posts_new_data$v2)
+posts_new_data$v3 <- gsub('<', '', posts_new_data$v3)
+posts_new_data$v3 <- gsub('>', '', posts_new_data$v3)
+posts_new_data$v4 <- gsub('<', '', posts_new_data$v4)
+posts_new_data$v4 <- gsub('>', '', posts_new_data$v4)
+posts_new_data$v5 <- gsub('<', '', posts_new_data$v5)
+posts_new_data$v5 <- gsub('>', '', posts_new_data$v5)
+posts_new_data$v6 <- gsub('<', '', posts_new_data$v6)
+posts_new_data$v6 <- gsub('>', '', posts_new_data$v6)
+
+# creating label encoding for the separated columns of the tags
+
+posts_new_data$v1 <- as.integer(factor(posts_new_data$v1))
+posts_new_data$v2 <- as.integer(factor(posts_new_data$v2))
+posts_new_data$v3 <- as.integer(factor(posts_new_data$v3))
+posts_new_data$v4 <- as.integer(factor(posts_new_data$v4))
+posts_new_data$v5 <- as.integer(factor(posts_new_data$v5))
+posts_new_data$v6 <- as.integer(factor(posts_new_data$v6))
+
+# replacing NA with 0 value
+
+posts_new_data$v1[is.na(posts_new_data$v1)] <- 0
+posts_new_data$v2[is.na(posts_new_data$v2)] <- 0
+posts_new_data$v3[is.na(posts_new_data$v3)] <- 0
+posts_new_data$v4[is.na(posts_new_data$v4)] <- 0
+posts_new_data$v5[is.na(posts_new_data$v5)] <- 0
+posts_new_data$v6[is.na(posts_new_data$v6)] <- 0
+posts_new_data$is_answered[is.na(posts_new_data$is_answered)] <- 0
+posts_new_data$ViewCount[is.na(posts_new_data$ViewCount)] <- 0
+```
+
+## Initializing the H2o Instance 
+
+
+```{r,results='hide'}
+# Initialize the h2o instance
+h2o.init(nthreads = -1)
+```
+
+
+
+## Random Forest 
+
+
+### Purpose: To predict the probability of a question getting answered based on the tags and viewcount of that particular post
+
+### Load the RF model 
+```{r , include=TRUE, echo=TRUE, warning=FALSE, message=FALSE }
+# Load the model
+rf_model <- h2o.loadModel("Group7-StackExchange_RF_model.h20")
+```
+
+### Performance of the RF Model
+```{r}
+perf <- h2o.performance(rf_model)
+print(h2o.mse(perf))
+```
+```{r}
+print(h2o.rmse(perf))
+```
+```{r}
+print(h2o.mae(perf))
+```
+```{r}
+print(h2o.rmsle(perf))
+```
+```{r}
+print(h2o.mean_residual_deviance(perf))
+```
+
+
+### XAI Model 1 - Variable Importance of RF Model 
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE }
+# Generate variable importance plot
+var_imp <- h2o.varimp(rf_model)
+h2o.varimp_plot(rf_model)
+```
+
+
+
+## Deep Learning 
+
+
+### Purpose: To predict the probability of a question getting answered based on the tags and viewcount of that particular post
+
+### Load the Deep Learning model 
+
+```{r , include=TRUE, echo=TRUE, warning=FALSE, message=FALSE }
+# Load the model
+dl_model <- h2o.loadModel("Group7-StackExchange_DL_model.h20")
+```
+
+### Performance of the Deep Learning Model
+
+```{r}
+perf <- h2o.performance(dl_model)
+print(h2o.mse(perf))
+```
+```{r}
+print(h2o.rmse(perf))
+```
+```{r}
+print(h2o.mae(perf))
+```
+```{r}
+print(h2o.rmsle(perf))
+```
+```{r}
+print(h2o.mean_residual_deviance(perf))
+```
+
+### XAI Model 2 - Variable Importance of Deep Learning Model 
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE }
+# Generate variable importance plot
+var_imp <- h2o.varimp(dl_model)
+h2o.varimp_plot(dl_model)
+```
+
+
+## Text Mining / NLP Implementation
+
+- **Text mining** was performed on the title column of the **posts dataset**.
+- A word cloud was generated to identify the most commonly used keywords within the titles.
+- The **top 5** most frequently occurring keywords, in order of frequency, are: **"using"**, **"data"**, **"error"**, **"python"**, and **"get"**.
+- These findings suggest that discussions within the community primarily revolve around these topics.
+- The insights gleaned from this analysis can inform future content creation and moderation strategies to better serve the needs of the community.
+
+
+
+
+```{r, include=TRUE, echo=TRUE, warning=FALSE, message=FALSE,results='hide'}
+
+tokens <- posts_new_data%>%
+  unnest_tokens(output = word, input = "Title")
+
+tokens %>%
+  count(word,sort = TRUE)
+
+sw = get_stopwords()
+
+tokens_cleaned <- tokens %>%
+  filter(!word %in% sw$word)
+
+nums <- tokens_cleaned %>%   
+  filter(str_detect(word, "^[0-9]")) %>%
+  select(word) %>% unique()
+
+tokens_cleaned <- tokens_cleaned %>%
+  filter(!word %in% nums$word)
+
+rare <- tokens_cleaned %>%   
+  count(word) %>%  
+  filter(n<5000) %>%  
+  select(word) %>% 
+  unique() 
+
+pal <- brewer.pal(8,"Dark2")
+
+tokens_cleaned %>%   count(word) %>%  
+  with(wordcloud(word, n, random.order = FALSE, max.words = 100, colors=pal))
+
+```
+
+## AI/ML/NLP Result Summary & Discussion:
+
+- Upon implementing the above **ML** and **NLP techniques**, it was determined that the **Random Forest** algorithm achieved the **lowest** values of **MSE** and **RMSE** and had the **best performance** metrics. Therefore, we recommend using this technique to determine whether a question will be answered or not.
+
+- **Sentiment analysis** was deemed irrelevant for this project since posts do not possess **positive** or **negative** sentiments, unlike movie reviews.
+
+- This project can be applied to other **Stack Exchange** sub-sites to perform similar **analysis** and **predictions**. This will help to ensure consistent community engagement and frequent user involvement. 

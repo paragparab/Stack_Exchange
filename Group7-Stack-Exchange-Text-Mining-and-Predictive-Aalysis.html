@@ -1,0 +1,692 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div>
+
+
+
+<h1 class="title toc-ignore">Group7-Stack Exchange-Text Mining and
+Predictive Analytics</h1>
+<h4 class="author">Akhil Golla, A. Krishna Reddy, Srirag Nair K M, Parag
+Parab</h4>
+<h4 class="date">04/26/2023</h4>
+
+</div>
+
+
+<div class="section level2">
+<h2>Business Context:</h2>
+<p><strong>Stack Exchange</strong> is a collection of
+<strong>question-and-answer</strong> (Q&amp;A) websites dedicated to
+various fields, with each site specializing in a specific topic. The
+network utilizes a reputation-based award system, which promotes
+self-moderation among users. The three most popular sites on the
+network, as of <strong>January 2023</strong>, are Stack Overflow, Super
+User, and Ask Ubuntu.</p>
+<p>For this project, we are focusing on Stack Overflow website within
+Stack Exchange network.</p>
+<p>API:</p>
+<ul>
+<li><a rel="noopener" href="https://api.stackexchange.com/2.2/posts?site=stackoverflow" class="uri">https://api.stackexchange.com/2.2/posts?site=stackoverflow</a></li>
+<li><a rel="noopener" href="https://api.stackexchange.com/2.2/users?site=stackoverflow" class="uri">https://api.stackexchange.com/2.2/users?site=stackoverflow</a></li>
+<li><a rel="noopener" href="https://api.stackexchange.com/2.2/tags?site=stackoverflow" class="uri">https://api.stackexchange.com/2.2/tags?site=stackoverflow</a></li>
+</ul>
+</div>
+<div class="section level2">
+<h2>Problem Decription:</h2>
+<p>Below is the aim of this project:</p>
+<ol style="list-style-type: decimal;">
+<li><p>To predict whether a post will be answered or not.</p></li>
+<li><p>To predict the view count of a particular post based on tags to
+maintain the community engagement.</p></li>
+<li><p>To analyze the most popular topics on the stack exchange
+website.</p></li>
+<li><p>Analyzing the data of Users to give an apt summary of their
+reputation trends over the years.</p></li>
+</ol>
+</div>
+<div class="section level2">
+<h2>Data Download Link:</h2>
+<ul>
+<li>URL to download data: “<a rel="noopener" href="https://drive.google.com/drive/folders/1wI6KOYO-kInD-aLM3MlXcUpBEezJ-AmC?usp=sharing" class="uri">https://drive.google.com/drive/folders/1wI6KOYO-kInD-aLM3MlXcUpBEezJ-AmC?usp=sharing</a>”</li>
+</ul>
+</div>
+<div class="section level2">
+<h2>Data Summary, Exploration and discussion:</h2>
+<p>We have covered data wrangling, data exploration and insights
+generation in this section.</p>
+<p>There are 3 types of data that we have used in our project:</p>
+<ol style="list-style-type: decimal;">
+<li>Posts data</li>
+<li>Users data</li>
+<li>Tags data</li>
+</ol>
+<p>Each of the above 3 datasets contain ~42000 instances.</p>
+<p>Posts data: It contains data about various posts and has below
+columns</p>
+<ol style="list-style-type: decimal;">
+<li>Id</li>
+<li>PostTypeId</li>
+<li>AcceptedAnswerId</li>
+<li>ParentId</li>
+<li>CreationDate</li>
+<li>DeletionDate</li>
+<li>Score</li>
+<li>ViewCount</li>
+<li>Body</li>
+<li>OwnerUserId</li>
+<li>OwnerDisplayName</li>
+<li>LastEditorUserId</li>
+<li>LastEditorDisplayName</li>
+<li>LastEditDate</li>
+<li>LastActivityDate</li>
+<li>Title</li>
+<li>Tags</li>
+<li>AnswerCount</li>
+<li>CommentCount</li>
+<li>FavoriteCount</li>
+<li>ClosedDate</li>
+<li>CommunityOwnedDate</li>
+<li>ContentLicense</li>
+</ol>
+<p>Users data: It has user specific data and contains below columns</p>
+<ol style="list-style-type: decimal;">
+<li>Id</li>
+<li>Reputation</li>
+<li>CreationDate</li>
+<li>DisplayName</li>
+<li>LastAccessDate</li>
+<li>WebsiteUrl</li>
+<li>Location</li>
+<li>AboutMe</li>
+<li>Views</li>
+<li>UpVotes</li>
+<li>DownVotes</li>
+<li>ProfileImageUrl</li>
+<li>EmailHash</li>
+<li>AccountId</li>
+</ol>
+<p>Tags data: It contains data of various tags that the posts are
+affiliated to and has below columns</p>
+<ol style="list-style-type: decimal;">
+<li>Id</li>
+<li>TagName</li>
+<li>Count</li>
+<li>ExcerptPostId</li>
+<li>WikiPostId</li>
+</ol>
+</div>
+<div class="section level2">
+<h2>Libraries</h2>
+<pre class="r"><code># loading required packages
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyverse)
+library(knitr)
+library(forecast)
+library(caret)
+library(wordcloud)
+library(rpart)
+library(rpart.plot)
+library(neuralnet)
+library(e1071)
+library(lubridate)
+library(randomForest)
+library(h2o)
+library(DALEX)
+library(stopwords)</code></pre>
+</div>
+<div class="section level2">
+<h2>Reading the Files</h2>
+<p>We are reading the three files the <strong>posts.csv</strong>,
+<strong>tags.csv</strong>, and <strong>users.csv</strong>, and storing
+the data from each file in separate variables
+<strong>posts_data</strong>, <strong>tags_data</strong>, and
+<strong>users_data</strong>.</p>
+<pre class="r"><code># Reading data
+posts_data &lt;- read.csv(&quot;posts.csv&quot;)
+tags_data &lt;- read.csv(&quot;tags.csv&quot;)
+users_data &lt;- read.csv(&quot;users.csv&quot;)</code></pre>
+</div>
+<div class="section level2">
+<h2>Data Processing</h2>
+<p>We are adding three new columns to the <strong>posts_data</strong>
+table: <strong>year</strong> to extract the year from
+<strong>CreationDate</strong>, <strong>Closed_Flag</strong> to indicate
+whether a post has been closed or not, and <strong>is_answered</strong>
+to show if a post has an accepted answer or not. These columns will help
+us analyze the data more efficiently.</p>
+<pre class="r"><code># Creating new columns for Year and Flag columns
+posts_data$year &lt;- lubridate::year(mdy_hm(posts_data$CreationDate))
+posts_data$Closed_Flag &lt;- ifelse(posts_data$ClosedDate == &quot;&quot;, &quot;open&quot;, &quot;closed&quot;)
+posts_data$is_answered &lt;- ifelse(posts_data$AcceptedAnswerId == &quot;&quot;, 0, 1)</code></pre>
+<p>This code counts the <strong>number of posts per year</strong> and
+creates a new table called <strong>posts_data_per_year</strong>. We are
+extracting the year from the <strong>CreationDate</strong> column. The
+resulting table has two columns, <strong>year</strong> and
+<strong>countOfPosts</strong>, which show the year and the number of
+posts for that year.</p>
+<pre class="r"><code># Count the number of posts per year
+posts_data_per_year &lt;- posts_data %&gt;%
+  count(Year = lubridate::year(mdy_hm(posts_data$CreationDate))) %&gt;%
+  rename(year = Year, countOfPosts = n)
+names(posts_data_per_year) &lt;- c(&quot;Year&quot;, &quot;Post_Count&quot;)
+library(kableExtra)
+head(posts_data_per_year, n = 6) %&gt;% 
+  kbl(caption = &quot;Posts Per Year&quot;, align = &quot;c&quot;) %&gt;%
+  kable_classic(full_width = F)</code></pre>
+<table class="lightable-classic" style="font-family: &quot;Arial Narrow&quot;, &quot;Source Sans Pro&quot;, sans-serif;width: auto !important;margin-left: auto;margin-right: auto;">
+<caption>
+Posts Per Year
+</caption>
+<thead>
+<tr>
+<th style="text-align:center;">
+Year
+</th>
+<th style="text-align:center;">
+Post_Count
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+2017
+</td>
+<td style="text-align:center;">
+4206
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2018
+</td>
+<td style="text-align:center;">
+7939
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2019
+</td>
+<td style="text-align:center;">
+10679
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2020
+</td>
+<td style="text-align:center;">
+9649
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2021
+</td>
+<td style="text-align:center;">
+3435
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2022
+</td>
+<td style="text-align:center;">
+6093
+</td>
+</tr>
+</tbody>
+</table>
+<div class="section level3">
+<h3>Visualization 1 - Number of Posts Year-on-Year</h3>
+<pre class="r"><code># Create a bar plot of post count per year
+head(posts_data_per_year, 10) %&gt;%
+  ggplot() +
+  geom_col(aes(Year, Post_Count), fill = &quot;cadetblue3&quot;) +
+  theme(legend.position = &quot;none&quot;, 
+        plot.title = element_text(hjust = 0.5),
+        panel.grid.major = element_blank()) +
+  xlab(&quot;Year&quot;) + 
+  ylab(&quot;Count of Posts&quot;)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<ul>
+<li>Here we can observe that <strong>2019</strong> and
+<strong>2020</strong> were the most engagement years. Also,
+<strong>2022</strong> is performing better as compared to
+<strong>2021</strong></li>
+</ul>
+</div>
+<div class="section level3">
+<h3>Visualization 2 - Answered v/s Unanswered Posts</h3>
+<pre class="r"><code>ggplot(posts_data,aes(x= &quot;&quot;, fill=Closed_Flag)) +
+  geom_bar(width=1)+
+  coord_polar(&quot;y&quot;)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<ul>
+<li><p>The pie chart indicates that a significant proportion of
+questions on the website are left unanswered, posing a potential risk to
+its user engagement. To mitigate this risk, implementing a reward system
+for users who answer specific questions could be a possible solution to
+incentivize participation and increase engagement.</p></li>
+<li><p>This would not only encourage users to contribute their expertise
+but also foster a sense of community on the website.</p></li>
+</ul>
+</div>
+<div class="section level3">
+<h3>Visualization 3 - Most Popular Tags</h3>
+<pre class="r"><code>head(tags_data,10) %&gt;%
+  ggplot(aes(fct_reorder(TagName,
+                                 Count),
+             Count))+
+  geom_col(fill = &quot;darkgoldenrod2&quot;) +
+  labs(x=&quot;Tag Name&quot;, y=&quot;Occurence&quot;, title=&quot;Most Popular Tags&quot;) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<ul>
+<li><p>The horizontal bar chart above illustrates the <strong>top
+10</strong> most frequently used tags on the website. By analyzing this
+chart, we can gain insight into the topics that are commonly discussed
+among members and determine their relevance to the website’s
+purpose.</p></li>
+<li><p>From the above horizontal bar graph we can see that
+<strong>JavaScript</strong> is the most popular tag followed by
+<strong>Java</strong>, <strong>C#</strong> and
+<strong>Python</strong>.</p></li>
+</ul>
+</div>
+<div class="section level3">
+<h3>Visualization 4 - Reputation Analysis over the years</h3>
+<pre class="r"><code>users_data$Year &lt;- lubridate::year(mdy_hm(users_data$CreationDate))
+
+# Creating a data frame to get average reputation per year
+avg_rep_per_year &lt;- aggregate(users_data[, c(&#39;Reputation&#39;)], list(users_data$Year), max)
+names(avg_rep_per_year) &lt;- c(&quot;Year&quot;, &quot;Reputation_Count&quot;)</code></pre>
+<pre class="r"><code>library(kableExtra)
+head(avg_rep_per_year, n = 6) %&gt;% 
+  kbl(caption = &quot;Reputation Per Year&quot;, align = &quot;c&quot;) %&gt;%
+  kable_classic(full_width = F)</code></pre>
+<table class="lightable-classic" style="font-family: &quot;Arial Narrow&quot;, &quot;Source Sans Pro&quot;, sans-serif;width: auto !important;margin-left: auto;margin-right: auto;">
+<caption>
+Reputation Per Year
+</caption>
+<thead>
+<tr>
+<th style="text-align:center;">
+Year
+</th>
+<th style="text-align:center;">
+Reputation_Count
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+2017
+</td>
+<td style="text-align:center;">
+15122
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2018
+</td>
+<td style="text-align:center;">
+35470
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2019
+</td>
+<td style="text-align:center;">
+31929
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2020
+</td>
+<td style="text-align:center;">
+4469
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2021
+</td>
+<td style="text-align:center;">
+7381
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2022
+</td>
+<td style="text-align:center;">
+930
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>ggplot(data=avg_rep_per_year, aes(x=Year, y=Reputation_Count, group=1)) +
+  geom_line(color = &quot;red&quot;)+
+  geom_point()+
+  labs(x=&quot;Year&quot;, y=&quot;Average Reputation&quot;, title=&quot;Average Reputation by Year&quot;)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<ul>
+<li><p>Based on the line plot above, it can be deduced that the
+<strong>average reputation</strong> in <strong>2022</strong> was the
+<strong>lowest</strong> among the observed years. This could potentially
+signify a decline in community engagement, further substantiated by the
+high number of unanswered questions.</p></li>
+<li><p>As such, it is crucial for Stack Exchange, particularly Stack
+Overflow, to implement measures that can help sustain community
+participation and maintain a healthy level of engagement.</p></li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2>AI/ML/NLP Procedure Summary:</h2>
+<p>This section focuses on the <strong>Machine Learning</strong> Models
+and <strong>Text Mining</strong></p>
+<p>We are implementing 2 modeling techniques as below:</p>
+<ol style="list-style-type: decimal;">
+<li>Random Forest</li>
+<li>Deep Learning</li>
+</ol>
+<p>In addition to this, we are also implementing <strong>Text mining/NLP
+technique</strong> to create a word cloud of most frequent keywords in
+the title column of posts.</p>
+</div>
+<div class="section level2">
+<h2>Data Pre-Processing</h2>
+<p>For determining the ViewCount on a particular post we have identified
+Tags of Post as the most important factor. Steps:</p>
+<ol style="list-style-type: decimal;">
+<li>Pre-processing</li>
+<li>Splitting the tags</li>
+<li>Converting text to numeric values using Label Encoding</li>
+<li>Handling NA values</li>
+</ol>
+<pre class="r"><code># splitting the tags into separate columns
+
+posts_new_data &lt;- posts_data %&gt;% separate(Tags,c(&quot;v1&quot;,&quot;v2&quot;,&quot;v3&quot;,&quot;v4&quot;,&quot;v5&quot;,&quot;v6&quot;),&quot;&gt;&lt;&quot;)
+
+# removing the unwanted characters from the separated columns
+posts_new_data$v1 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v1)
+posts_new_data$v1 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v1)
+posts_new_data$v2 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v2)
+posts_new_data$v2 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v2)
+posts_new_data$v3 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v3)
+posts_new_data$v3 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v3)
+posts_new_data$v4 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v4)
+posts_new_data$v4 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v4)
+posts_new_data$v5 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v5)
+posts_new_data$v5 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v5)
+posts_new_data$v6 &lt;- gsub(&#39;&lt;&#39;, &#39;&#39;, posts_new_data$v6)
+posts_new_data$v6 &lt;- gsub(&#39;&gt;&#39;, &#39;&#39;, posts_new_data$v6)
+
+# creating label encoding for the separated columns of the tags
+
+posts_new_data$v1 &lt;- as.integer(factor(posts_new_data$v1))
+posts_new_data$v2 &lt;- as.integer(factor(posts_new_data$v2))
+posts_new_data$v3 &lt;- as.integer(factor(posts_new_data$v3))
+posts_new_data$v4 &lt;- as.integer(factor(posts_new_data$v4))
+posts_new_data$v5 &lt;- as.integer(factor(posts_new_data$v5))
+posts_new_data$v6 &lt;- as.integer(factor(posts_new_data$v6))
+
+# replacing NA with 0 value
+
+posts_new_data$v1[is.na(posts_new_data$v1)] &lt;- 0
+posts_new_data$v2[is.na(posts_new_data$v2)] &lt;- 0
+posts_new_data$v3[is.na(posts_new_data$v3)] &lt;- 0
+posts_new_data$v4[is.na(posts_new_data$v4)] &lt;- 0
+posts_new_data$v5[is.na(posts_new_data$v5)] &lt;- 0
+posts_new_data$v6[is.na(posts_new_data$v6)] &lt;- 0
+posts_new_data$is_answered[is.na(posts_new_data$is_answered)] &lt;- 0
+posts_new_data$ViewCount[is.na(posts_new_data$ViewCount)] &lt;- 0</code></pre>
+</div>
+<div class="section level2">
+<h2>Initializing the H2o Instance</h2>
+<pre class="r"><code># Initialize the h2o instance
+h2o.init(nthreads = -1)</code></pre>
+</div>
+<div class="section level2">
+<h2>Random Forest</h2>
+<div class="section level3">
+<h3>Purpose: To predict the probability of a question getting answered
+based on the tags and viewcount of that particular post</h3>
+</div>
+<div class="section level3">
+<h3>Load the RF model</h3>
+<pre class="r"><code># Load the model
+rf_model &lt;- h2o.loadModel(&quot;Group7-StackExchange_RF_model.h20&quot;)</code></pre>
+</div>
+<div class="section level3">
+<h3>Performance of the RF Model</h3>
+<pre class="r"><code>perf &lt;- h2o.performance(rf_model)
+print(h2o.mse(perf))</code></pre>
+<pre><code>## [1] 0.234931</code></pre>
+<pre class="r"><code>print(h2o.rmse(perf))</code></pre>
+<pre><code>## [1] 0.4846968</code></pre>
+<pre class="r"><code>print(h2o.mae(perf))</code></pre>
+<pre><code>## [1] 0.2200056</code></pre>
+<pre class="r"><code>print(h2o.rmsle(perf))</code></pre>
+<pre><code>## [1] 0.244156</code></pre>
+<pre class="r"><code>print(h2o.mean_residual_deviance(perf))</code></pre>
+<pre><code>## [1] 0.234931</code></pre>
+</div>
+<div class="section level3">
+<h3>XAI Model 1 - Variable Importance of RF Model</h3>
+<pre class="r"><code># Generate variable importance plot
+var_imp &lt;- h2o.varimp(rf_model)
+h2o.varimp_plot(rf_model)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+</div>
+</div>
+<div class="section level2">
+<h2>Deep Learning</h2>
+<div class="section level3">
+<h3>Purpose: To predict the probability of a question getting answered
+based on the tags and viewcount of that particular post</h3>
+</div>
+<div class="section level3">
+<h3>Load the Deep Learning model</h3>
+<pre class="r"><code># Load the model
+dl_model &lt;- h2o.loadModel(&quot;Group7-StackExchange_DL_model.h20&quot;)</code></pre>
+</div>
+<div class="section level3">
+<h3>Performance of the Deep Learning Model</h3>
+<pre class="r"><code>perf &lt;- h2o.performance(dl_model)
+print(h2o.mse(perf))</code></pre>
+<pre><code>## [1] 0.6832968</code></pre>
+<pre class="r"><code>print(h2o.rmse(perf))</code></pre>
+<pre><code>## [1] 0.8266177</code></pre>
+<pre class="r"><code>print(h2o.mae(perf))</code></pre>
+<pre><code>## [1] 0.2396713</code></pre>
+<pre class="r"><code>print(h2o.rmsle(perf))</code></pre>
+<pre><code>## [1] 0.2368963</code></pre>
+<pre class="r"><code>print(h2o.mean_residual_deviance(perf))</code></pre>
+<pre><code>## [1] 0.6832968</code></pre>
+</div>
+<div class="section level3">
+<h3>XAI Model 2 - Variable Importance of Deep Learning Model</h3>
+<pre class="r"><code># Generate variable importance plot
+var_imp &lt;- h2o.varimp(dl_model)
+h2o.varimp_plot(dl_model)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+</div>
+</div>
+<div class="section level2">
+<h2>Text Mining / NLP Implementation</h2>
+<ul>
+<li><strong>Text mining</strong> was performed on the title column of
+the <strong>posts dataset</strong>.</li>
+<li>A word cloud was generated to identify the most commonly used
+keywords within the titles.</li>
+<li>The <strong>top 5</strong> most frequently occurring keywords, in
+order of frequency, are: <strong>“using”</strong>,
+<strong>“data”</strong>, <strong>“error”</strong>,
+<strong>“python”</strong>, and <strong>“get”</strong>.</li>
+<li>These findings suggest that discussions within the community
+primarily revolve around these topics.</li>
+<li>The insights gleaned from this analysis can inform future content
+creation and moderation strategies to better serve the needs of the
+community.</li>
+</ul>
+<pre class="r"><code>tokens &lt;- posts_new_data%&gt;%
+  unnest_tokens(output = word, input = &quot;Title&quot;)
+
+tokens %&gt;%
+  count(word,sort = TRUE)
+
+sw = get_stopwords()
+
+tokens_cleaned &lt;- tokens %&gt;%
+  filter(!word %in% sw$word)
+
+nums &lt;- tokens_cleaned %&gt;%   
+  filter(str_detect(word, &quot;^[0-9]&quot;)) %&gt;%
+  select(word) %&gt;% unique()
+
+tokens_cleaned &lt;- tokens_cleaned %&gt;%
+  filter(!word %in% nums$word)
+
+rare &lt;- tokens_cleaned %&gt;%   
+  count(word) %&gt;%  
+  filter(n&lt;5000) %&gt;%  
+  select(word) %&gt;% 
+  unique() 
+
+pal &lt;- brewer.pal(8,&quot;Dark2&quot;)
+
+tokens_cleaned %&gt;%   count(word) %&gt;%  
+  with(wordcloud(word, n, random.order = FALSE, max.words = 100, colors=pal))</code></pre>
+<p><img src="javascript://" width="672"/></p>
+</div>
+<div class="section level2">
+<h2>AI/ML/NLP Result Summary &amp; Discussion:</h2>
+<ul>
+<li><p>Upon implementing the above <strong>ML</strong> and <strong>NLP
+techniques</strong>, it was determined that the <strong>Random
+Forest</strong> algorithm achieved the <strong>lowest</strong> values of
+<strong>MSE</strong> and <strong>RMSE</strong> and had the <strong>best
+performance</strong> metrics. Therefore, we recommend using this
+technique to determine whether a question will be answered or
+not.</p></li>
+<li><p><strong>Sentiment analysis</strong> was deemed irrelevant for
+this project since posts do not possess <strong>positive</strong> or
+<strong>negative</strong> sentiments, unlike movie reviews.</p></li>
+<li><p>This project can be applied to other <strong>Stack
+Exchange</strong> sub-sites to perform similar <strong>analysis</strong>
+and <strong>predictions</strong>. This will help to ensure consistent
+community engagement and frequent user involvement.</p></li>
+</ul>
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="module" src="https://s.brightspace.com/lib/bsi/20.23.3-210/unbundled/mathjax.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					if (document.querySelector('math') || /\$\$|\\\(|\\\[|\\begin{|\\ref{|\\eqref{/.test(document.body.innerHTML)) {
+						document.querySelectorAll('mspace[linebreak="newline"]').forEach(elm => {
+							elm.setAttribute('style', 'display: block; height: 0.5rem;');
+						});
+
+						window.D2L.MathJax.loadMathJax({
+							'outputScale': 1.3,
+							'renderLatex': false
+						});
+					}
+				});</script><script type="module" src="https://s.brightspace.com/lib/bsi/20.23.3-210/unbundled/prism.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					document.querySelectorAll('.d2l-code').forEach(code => {
+						window.D2L.Prism.formatCodeElement(code);
+					});
+				});</script></body></html>
